@@ -1,0 +1,5 @@
+# Vorlesung 1
+
+Lesen. Erster Absatz aus dem Wikipedia-Artikel zur "Scientific Method" https://en.wikipedia.org/wiki/Scientific_method. Bis zum Inhaltsverzeichnis
+Ggfs. sollten Sie den Links folgen um die Konzepte zu verstehen.
+
