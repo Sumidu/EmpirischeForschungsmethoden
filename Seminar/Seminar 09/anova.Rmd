@@ -1,0 +1,144 @@
+---
+title: "R ANOVA"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+# https://github.com/statisticsforsocialscience/dataforsocialscience
+library(dataforsocialscience)
+library(jmv)
+library(plotrix)
+library(knitr)
+```
+
+
+
+```{r echo=FALSE}
+
+robo_care %>% 
+  filter(gender != "rather not say") %>% 
+  t.test(cse ~ gender, data = .)
+
+t_d <- robo_care %>% 
+  filter(gender != "rather not say") 
+
+t.test(x = t_d$robo_bed, y = t_d$human_bed, paired = TRUE)
+
+
+```
+
+
+# Varianzanalysen
+
+
+```{r ANOVA}
+
+
+robo_care %>% 
+  ANOVA(dep = "cse", factors = c("gender"),
+        effectSize = "partEta",
+        postHoc = cse ~ gender,
+        emMeans = ~ gender,
+        emmPlots = TRUE)
+
+robo_care_d <- robo_care
+
+## Recoding robo_care_d$gender into robo_care_d$gender_rec
+robo_care_d$gender_rec <- fct_recode(robo_care_d$gender,
+               "keine Angabe" = "rather not say",
+               "männlich" = "male",
+               "weiblich" = "female")
+
+## Recoding robo_care_d$gender into robo_care_d$gender_rec
+robo_care_d$gender_rec <- fct_recode(robo_care_d$gender,
+               "keine Angabe" = "rather not say",
+               "männlich" = "male",
+               "weiblich" = "female")
+robo_care_d %>% 
+  group_by(gender_rec) %>% 
+  summarise(cse_mean  = mean(cse) - 1, 
+            count = n(),
+            cse_se = std.error(cse)) %>% 
+  mutate(cse_ci = cse_se * 1.96) %>% 
+  ggplot() +
+  aes(x = gender_rec, fill = gender_rec,
+      y = cse_mean,
+      ymin = cse_mean - cse_ci, 
+      ymax = cse_mean + cse_ci,
+      group = 1) +
+  geom_col(width = 0.4) +
+  geom_line() +
+  geom_errorbar(width = 0.2) +
+  scale_y_continuous(limits = c(0,5), breaks = 0:5) +
+  labs(title = "Männer haben eine höhere Kontrollüberzeugung im Umgang mit Technik",
+       subtitle = "Mittelwertplot mit 95% Konfidenzintervall",
+       x = "Geschlecht",
+       y = "Kontrollüberzeugung im Umgang mit Technik [0-5]",
+       fill = "Geschlecht")
+
+```
+
+
+Es gibt Unterschiede zwischen den Geschlechtern in Hinblick auf den KUT (F(2,290)=21.2***, p < .001). Dabei unterscheiden sich aber nur Männer und Frauen im KUT (Unterschied M = 0.738, t(290) = 6.462, p-tukey < .001).
+
+
+
+
+
+```{r ANCOVA}
+
+
+robo_care %>% 
+  filter(gender != "rather not say") %>% 
+  mutate(gender = fct_recode(gender, "male" = "rather not say")) %>% 
+  filter(job_type %in% c("student", "employee")) %>% 
+  mutate(job_type = fct_recode(job_type, "student" = "unemployed",
+                               "student" = "self-employed",
+                               "student" = "pensioner")) %>% 
+  ancova(dep = "cse", factors = c("gender", "job_type"),
+         covs = c("age"), 
+        effectSize = "partEta",
+        postHoc = cse ~ gender + job_type + gender:job_type,
+        emMeans = ~ gender + job_type + gender:job_type,
+        emmPlots = TRUE)
+
+
+```
+
+
+```{r}
+robo_care %>% 
+  filter(gender != "rather not say") %>% 
+  mutate(gender = fct_recode(gender, "male" = "rather not say")) %>% 
+  filter(job_type %in% c("student", "employee")) %>% 
+  mutate(job_type = fct_recode(job_type, "student" = "unemployed",
+                               "student" = "self-employed",
+                               "student" = "pensioner")) %>% 
+  mancova(deps = c("human_care_pref", "robot_care_pref"),
+          factors = c("gender", "job_type"),
+          covs = c("age"))
+
+
+robo_care %>% 
+  filter(gender != "rather not say") %>% 
+  mutate(gender = fct_recode(gender, "male" = "rather not say")) %>% 
+  filter(job_type %in% c("student", "employee")) %>% 
+  group_by(gender, job_type) %>% 
+  summarise(ht = mean(human_care_pref, na.rm = TRUE), 
+            rt = mean(robot_care_pref, na.rm = TRUE)) %>% 
+  pivot_longer(cols = c(ht, rt),
+               names_to = "trost_by",
+               values_to = "value") %>% 
+  ggplot() +
+  aes(x = gender, y = value, color = job_type, 
+      shape = trost_by, 
+      group = interaction(job_type, trost_by)) +
+    geom_point(size = 3) +
+    geom_line() +
+  facet_wrap(~ trost_by)
+
+```
+
